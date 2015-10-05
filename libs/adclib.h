@@ -10,8 +10,8 @@
  * ADC_DIR_PREFIX
  */
 
-#ifndef ADCLIB_H_INCLUDED
-#define ADCLIB_H_INCLUDED
+#ifndef _ADCLIB_H_INCLUDED
+#define _ADCLIB_H_INCLUDED
 
 #define ADC_DRIVER          "cape-bone-iio"
 
@@ -27,7 +27,7 @@
 
 int adc_init();
 int adc_get_value(int adc);
-int adc_sample(int adc, int samples_requested);
+int adc_sample(int adc, int samplesRequested);
 int adc_compare(const void *a, const void *b);
 
-#endif // ADCLIB_H_INCLUDED
+#endif // _ADCLIB_H_INCLUDED

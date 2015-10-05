@@ -6,8 +6,8 @@
  * Trivial abstraction to simplify reading/writing to files, primarily used for accessing SYSFS files on BeagleBone.
  */
 
-#ifndef SYSFSLIB_H_INCLUDED
-#define SYSFSLIB_H_INCLUDED
+#ifndef _SYSFSLIB_H_INCLUDED
+#define _SYSFSLIB_H_INCLUDED
 
 /**
  * This is the BeagleBone's CapeMgr cape loading virtual file. Writing to it causes CapeMgr to try and load a cape,
@@ -23,4 +23,4 @@ int  sysfs_read(const char *filename, char *buf, int maxlen);
 int  sysfs_open_read(const char *filename, int flags);
 void sysfs_close(int fd);
 
-#endif // SYSFSLIB_H_INCLUDED
+#endif // _SYSFSLIB_H_INCLUDED

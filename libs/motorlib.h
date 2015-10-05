@@ -4,10 +4,14 @@
  * @author <oroboto@oroboto.net>, www.oroboto.net, 2014
  *
  * Abstraction for basic control of DC motors connected to a DRV8833 which is itself driven by the BeagleBone's PWMs.
+ *
+ * Functions that accept a speed parameter pass it directly to the PWM subsystem, which expects speeds specified in
+ * nanoseconds (to set the duty cycle of the PWM with relation to its period). Use the pwm_speed() function to get
+ * these values.
  */
 
-#ifndef MOTORLIB_H_INCLUDED
-#define MOTORLIB_H_INCLUDED
+#ifndef _MOTORLIB_H_INCLUDED
+#define _MOTORLIB_H_INCLUDED
 
 #define MOTOR_LEFT          0
 #define MOTOR_RIGHT         1
@@ -31,4 +35,4 @@ int  bot_reverse(int speed);
 void bot_stop();
 int  bot_spin(int speed, int direction);
 
-#endif // MOTORLIB_H_INCLUDED
+#endif // _MOTORLIB_H_INCLUDED

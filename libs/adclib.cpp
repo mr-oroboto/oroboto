@@ -2,8 +2,6 @@
  * adclib.cpp
  *
  * @author <oroboto@oroboto.net>, www.oroboto.net, 2014
- *
- * Trivial abstraction to simplify use of BeagleBone ADC.
  */
 
 #include <stdio.h>
@@ -11,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+
 #include "adclib.h"
+#include "logger.h"
 #include "sysfslib.h"
 
 /**
@@ -37,63 +37,63 @@ int adc_init()
  */
 int adc_get_value(int adc)
 {
-    char         ctrl_file[1024];
-    char         adc_val[16];
-    unsigned int bytes_read;
+    char    ctrlFile[1024];
+    char    adcVal[16];
+    int 	bytesRead;
 
     switch (adc)
     {
         case 0:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_0_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_0_DIR);
             break;
         case 1:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_1_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_1_DIR);
             break;
         case 2:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_2_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_2_DIR);
             break;
         case 3:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_3_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_3_DIR);
             break;
         case 4:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_4_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_4_DIR);
             break;
         case 5:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_5_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_5_DIR);
             break;
         case 6:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_6_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_6_DIR);
             break;
         case 7:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_7_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_7_DIR);
             break;
 
         default:
-            fprintf(stderr, "adc_get_value: unknown ADC\n");
+        	Logger::getInstance()->error("adc::adc_get_value: unknown ADC");
             return -1;
     }
 
-    memset(adc_val, 0, sizeof(adc_val));
+    memset(adcVal, 0, sizeof(adcVal));
 
-    bytes_read = sysfs_read(ctrl_file, adc_val, sizeof(adc_val));
+    bytesRead = sysfs_read(ctrlFile, adcVal, sizeof(adcVal));
 
-    if (bytes_read < 0)
+    if (bytesRead < 0)
     {
-        fprintf(stderr, "adc_get_value: failed to read ADC sysfs file\n");
+    	Logger::getInstance()->error("adc::adc_get_value: failed to read ADC sysfs file");
         return -1;
     }
 
-    if (bytes_read >= sizeof(adc_val))
+    if (bytesRead >= sizeof(adcVal))
     {
-        fprintf(stderr, "adc_get_value: overflow\n");
+    	Logger::getInstance()->error("adc::adc_get_value: overflow");
         return -1;
     }
     else
     {
-        adc_val[bytes_read+1] = '\0';
+    	adcVal[bytesRead+1] = '\0';
     }
 
-    return atoi(adc_val);
+    return atoi(adcVal);
 }
 
 /**
@@ -104,95 +104,95 @@ int adc_get_value(int adc)
  *
  * @return int
  */
-int adc_sample(int adc, int samples_requested)
+int adc_sample(int adc, int samplesRequested)
 {
-    char ctrl_file[1024];
-    char adc_val[16];
+    char ctrlFile[1024];
+    char adcVal[16];
 
-    int          fd, i, samples_stored;
-    int *        sample_buf;
-    unsigned int bytes_read;
+    int          fd, i, samplesStored;
+    int *        sampleBuf;
+    unsigned int bytesRead;
 
     switch (adc)
     {
         case 0:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_0_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_0_DIR);
             break;
         case 1:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_1_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_1_DIR);
             break;
         case 2:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_2_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_2_DIR);
             break;
         case 3:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_3_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_3_DIR);
             break;
         case 4:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_4_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_4_DIR);
             break;
         case 5:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_5_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_5_DIR);
             break;
         case 6:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_6_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_6_DIR);
             break;
         case 7:
-            snprintf(ctrl_file, sizeof(ctrl_file), "%s%s", ADC_DIR_PREFIX, ADC_7_DIR);
+            snprintf(ctrlFile, sizeof(ctrlFile), "%s%s", ADC_DIR_PREFIX, ADC_7_DIR);
             break;
 
         default:
-            fprintf(stderr, "adc_sample: unknown ADC\n");
+        	Logger::getInstance()->error("adc::adc_sample: unknown ADC");
             return -1;
     }
 
-    if ((fd = sysfs_open_read(ctrl_file, O_RDONLY)) < 0)
+    if ((fd = sysfs_open_read(ctrlFile, O_RDONLY)) < 0)
     {
-        fprintf(stderr, "adc_sample: Failed to open ADC sysfs control file\n");
+    	Logger::getInstance()->error("adc::adc_sample: failed to open ADC sysfs control file");
         return -1;
     }
 
     // Allocate the sample buffer
-    sample_buf = (int*)malloc(samples_requested * sizeof(int));
-    if (sample_buf == NULL)
+    sampleBuf = (int*)malloc(samplesRequested * sizeof(int));
+    if (sampleBuf == NULL)
     {
-        fprintf(stderr, "adc_sample: Failed to allocate sample buffer, out of memory?\n");
+    	Logger::getInstance()->error("adc::adc_sample: failed to allocate sample buffer, out of memory?");
         sysfs_close(fd);
         return -1;
     }
 
-    memset(sample_buf, 0, samples_requested * sizeof(int));
+    memset(sampleBuf, 0, samplesRequested * sizeof(int));
 
-    for (i = 0, samples_stored = 0; samples_stored < samples_requested && (i < samples_requested * 2); i++)
+    for (i = 0, samplesStored = 0; samplesStored < samplesRequested && (i < samplesRequested * 2); i++)
     {
         usleep(1000);  // 1ms
-        memset(adc_val, 0, sizeof(adc_val));
+        memset(adcVal, 0, sizeof(adcVal));
 
         lseek(fd, 0, SEEK_SET);
 
-        if ((bytes_read = read(fd, adc_val, sizeof(adc_val))) <= 0)
+        if ((bytesRead = read(fd, adcVal, sizeof(adcVal))) <= 0)
         {
-            fprintf(stderr, "adc_sample: Failed to take sample, trying again\n");
+        	Logger::getInstance()->debug("adc::adc_sample: failed to take sample, trying again");
             continue;
         }
 
-        if (bytes_read >= sizeof(adc_val))
+        if (bytesRead >= sizeof(adcVal))
         {
-            fprintf(stderr, "adc_sample: overflow, trying again\n");
+        	Logger::getInstance()->notice("adc::adc_sample: overflow, trying again");
             continue;
         }
 
-        adc_val[bytes_read+1] = '\0';
-        sample_buf[samples_stored] = atoi(adc_val);
+        adcVal[bytesRead+1] = '\0';
+        sampleBuf[samplesStored] = atoi(adcVal);
 
-        samples_stored++;
+        samplesStored++;
     }
 
     // sort to find outliers and select median
-    qsort(sample_buf, samples_stored, sizeof(int), adc_compare);
+    qsort(sampleBuf, samplesStored, sizeof(int), adc_compare);
 
-    i = sample_buf[samples_stored / 2];
+    i = sampleBuf[samplesStored / 2];
 
-    free(sample_buf);
+    free(sampleBuf);
     sysfs_close(fd);
 
     return i;

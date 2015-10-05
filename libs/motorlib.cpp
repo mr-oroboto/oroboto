@@ -2,12 +2,6 @@
  * motorlib.cpp
  *
  * @author <oroboto@oroboto.net>, www.oroboto.net, 2014
- *
- * Abstraction for basic control of DC motors connected to a DRV8833 which is itself driven by the BeagleBone's PWMs.
- *
- * Functions that accept a speed parameter pass it directly to the PWM subsystem, which expects speeds specified in
- * nanoseconds (to set the duty cycle of the PWM with relation to its period). Use the pwm_speed() function to get
- * these values.
  */
 
 #include <stdio.h>
@@ -15,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+
 #include "motorlib.h"
+#include "logger.h"
 #include "pwmlib.h"
 
 /**
@@ -61,7 +57,7 @@ int motor_forward(int motor, int speed)
             break;
 
         default:
-            fprintf(stderr, "motor_forward: unknown motor\n");
+        	Logger::getInstance()->error("motor::motor_forward: unknown motor");
             return -1;
     }
 
@@ -97,7 +93,7 @@ int motor_reverse(int motor, int speed)
             break;
 
         default:
-            fprintf(stderr, "motor_reverse: unknown motor\n");
+        	Logger::getInstance()->error("motor::motor_reverse: unknown motor");
             return -1;
     }
 
@@ -124,7 +120,7 @@ int motor_stop(int motor)
             break;
 
         default:
-            fprintf(stderr, "motor_stop: unknown motor\n");
+        	Logger::getInstance()->error("motor::motor_stop: unknown motor");
             return -1;
     }
 
@@ -203,7 +199,7 @@ int bot_spin(int speed, int direction)
             break;
 
         default:
-            fprintf(stderr, "bot_spin: invalid direction\n");
+        	Logger::getInstance()->error("motor::bot_spin: invalid direction");
             return -1;
     }
 

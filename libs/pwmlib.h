@@ -11,8 +11,8 @@
  * PWM_0_DIR, PWM_1_DIR, PWM_2_DIR, PWM_3_DIR
  */
 
-#ifndef PWMLIB_H_INCLUDED
-#define PWMLIB_H_INCLUDED
+#ifndef _PWMLIB_H_INCLUDED
+#define _PWMLIB_H_INCLUDED
 
 #define PWM_DRIVER          "am33xx_pwm"                // the name of the PWM cape
 #define PWM_0_DRIVER        "bone_pwm_P9_14"            // the PWM on P9_14
@@ -43,6 +43,6 @@ int          pwm_set_duty(int pwm, int duty);
 int          pwm_set_polarity(int pwm, int polarity);
 const char * pwm_get_ctrl_file_prefix(int pwm);
 int          pwm_pull(int pwm, int direction);
-int          pwm_speed(int);
+int          pwm_speed(int dcPercent);
 
-#endif // PWMLIB_H_INCLUDED
+#endif // _PWMLIB_H_INCLUDED

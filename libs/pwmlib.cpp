@@ -2,8 +2,6 @@
  * pwmlib.cpp
  *
  * @author <oroboto@oroboto.net>, www.oroboto.net, 2014
- *
- * Abstraction for basic control of BeagleBone's PWMs.
  */
 
 #include <stdio.h>
@@ -11,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+
 #include "pwmlib.h"
+#include "logger.h"
 #include "sysfslib.h"
 
 /**
@@ -40,32 +40,32 @@ int pwm_init()
  */
 int pwm_enable(int pwm)
 {
-    const char *pwm_driver;
+    const char *pwmDriver;
 
     switch (pwm)
     {
         case 0:
-            pwm_driver = PWM_0_DRIVER;
+        	pwmDriver = PWM_0_DRIVER;
             break;
 
         case 1:
-            pwm_driver = PWM_1_DRIVER;
+        	pwmDriver = PWM_1_DRIVER;
             break;
 
         case 2:
-            pwm_driver = PWM_2_DRIVER;
+        	pwmDriver = PWM_2_DRIVER;
             break;
 
         case 3:
-            pwm_driver = PWM_3_DRIVER;
+        	pwmDriver = PWM_3_DRIVER;
             break;
 
         default:
-            fprintf(stderr, "pwm_enable: unknown PWM\n");
+        	Logger::getInstance()->error("pwm::pwm_enable: unknown PWM");
             return -1;
     }
 
-    if (sysfs_write(SLOTS_FILE, pwm_driver) == 0)
+    if (sysfs_write(SLOTS_FILE, pwmDriver) == 0)
     {
         // Pull the PWM pin high by default
         pwm_set_period(pwm, PWM_DEFAULT_PERIOD);
@@ -74,7 +74,7 @@ int pwm_enable(int pwm)
     }
     else
     {
-        fprintf(stderr, "pwm_enable: Failed to enable PWM channel %d\n", pwm);
+    	Logger::getInstance()->error("pwm::pwm_enable: failed to enable PWM channel %d", pwm);
         return -1;
     }
 
@@ -100,7 +100,7 @@ int pwm_set_period(int pwm, int period)
 
     if ( ! pwm_ctrl_file_prefix)
     {
-        fprintf(stderr, "pwm_set_period: unknown PWM\n");
+    	Logger::getInstance()->error("pwm::pwm_set_period: unknown PWM");
         return -1;
     }
 
@@ -129,7 +129,7 @@ int pwm_set_duty(int pwm, int duty)
 
     if ( ! pwm_ctrl_file_prefix)
     {
-        fprintf(stderr, "pwm_set_duty: unknown PWM\n");
+    	Logger::getInstance()->error("pwm::pwm_set_duty: unknown PWM");
         return -1;
     }
 
@@ -158,7 +158,7 @@ int pwm_set_polarity(int pwm, int polarity)
 
     if ( ! pwm_ctrl_file_prefix)
     {
-        fprintf(stderr, "pwm_set_polarity: unknown PWM\n");
+    	Logger::getInstance()->error("pwm::pwm_set_polarity: unknown PWM");
         return -1;
     }
 
@@ -191,7 +191,7 @@ int pwm_pull(int pwm, int direction)
             break;
 
         default:
-            fprintf(stderr, "pwm_pull: unknown direction\n");
+        	Logger::getInstance()->error("pwm::pwm_pull: unknown direction");
             return -1;
     }
 
@@ -228,7 +228,7 @@ const char * pwm_get_ctrl_file_prefix(int pwm)
             break;
 
         default:
-            fprintf(stderr, "pwm_get_ctrl_file_prefix: unknown PWM\n");
+        	Logger::getInstance()->error("pwm::pwm_get_ctrl_file_prefix: unknown PWM");
             return NULL;
     }
 
@@ -238,20 +238,20 @@ const char * pwm_get_ctrl_file_prefix(int pwm)
 /**
  * A helper to convert DC as a percentage to DC in nS based on the default period.
  *
- * @param int dc_percent
+ * @param int dcPercent
  *
  * @return int
  */
-int pwm_speed(int dc_percent)
+int pwm_speed(int dcPercent)
 {
-    if (dc_percent < 0 || dc_percent > 100)
+    if (dcPercent < 0 || dcPercent > 100)
     {
-        perror("pwm_speed: invalid");
+    	Logger::getInstance()->error("pwm::pwm_speed: invalid duty cycle percentage");
         return -1;
     }
 
-    int duty = (int)(((float)(100 - dc_percent) / 100.0)*(float)PWM_DEFAULT_PERIOD);
-//  int duty = (int)(((float)(dc_percent) / 100.0)*(float)PWM_DEFAULT_PERIOD);
+    int duty = (int)(((float)(100 - dcPercent) / 100.0)*(float)PWM_DEFAULT_PERIOD);
+//  int duty = (int)(((float)(dcPercent) / 100.0)*(float)PWM_DEFAULT_PERIOD);
 
     return duty;
 }

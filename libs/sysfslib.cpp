@@ -2,8 +2,6 @@
  * sysfslib.cpp
  *
  * @author <oroboto@oroboto.net>, www.oroboto.net, 2014
- *
- * Trivial abstraction to simplify reading/writing to files, primarily used for accessing SYSFS files on BeagleBone.
  */
 
 #include <stdio.h>
@@ -11,7 +9,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+
 #include "sysfslib.h"
+#include "logger.h"
 
 /**
  * Open, write, close a file.
@@ -28,7 +28,7 @@ int sysfs_write(const char *filename, const char *str)
     fd = open(filename, O_WRONLY);
     if (fd < 0)
     {
-        fprintf(stderr, "sysfs_write: Failed to open %s for writing\n", filename);
+    	Logger::getInstance()->error("sysfs::sysfs_write: failed to open %s for writing", filename);
         return fd;
     }
 
@@ -54,13 +54,13 @@ int sysfs_read(const char *filename, char *buf, int maxlen)
     fd = open(filename, O_RDONLY);
     if (fd < 0)
     {
-        fprintf(stderr, "sysfs_read: Failed to open %s for reading\n", filename);
+    	Logger::getInstance()->error("sysfs::sysfs_read: failed to open %s for reading", filename);
         return fd;
     }
 
     if ((bytes_read = read(fd, buf, maxlen)) <= 0)
     {
-        fprintf(stderr, "sysfs_read: Failed to read from %s\n", filename);
+    	Logger::getInstance()->error("sysfs::sysfs_read: failed to read from %s", filename);
     }
 
     close(fd);
@@ -83,7 +83,7 @@ int sysfs_open_read(const char *filename, int flags = O_RDONLY)
     fd = open(filename, flags);
     if (fd < 0)
     {
-        fprintf(stderr, "sysfs_open_read: Failed to open %s for reading\n", filename);
+    	Logger::getInstance()->error("sysfs::sysfs_open_read: failed to open %s for reading", filename);
         return fd;
     }
 
