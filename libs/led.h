@@ -37,7 +37,7 @@ class Led
 		void    off();
 		void    strobe();
 
-		bool    getRunning();
+		bool    isRunning();
 };
 
 #endif // _LED_H_INCLUDED

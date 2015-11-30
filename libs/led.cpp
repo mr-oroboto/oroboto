@@ -102,9 +102,9 @@ void Led::stop()
 }
 
 /**
- * Led::getRunning - is the pulse thread running?
+ * Led::isRunning - is the pulse thread running?
  */
-bool Led::getRunning()
+bool Led::isRunning()
 {
 	return _bRun;
 }
