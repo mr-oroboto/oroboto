@@ -17,11 +17,11 @@
 #include "controller.h"
 #include "../libs/motorlib.h"
 #include "../libs/pwmlib.h"
-#include "../libs/adclib.h"
 #include "../libs/led.h"
 #include "../libs/logger.h"
 #include "../libs/dotlog.h"
 #include "../libs/odo.h"
+#include "../libs/poseprovider.h"
 
 Controller::Controller()
 {
@@ -32,7 +32,6 @@ Controller::Controller()
 	_odo    = new Odometer(LEFT_WHEEL_ENCODER_GPIO_A, LEFT_WHEEL_ENCODER_GPIO_B, RIGHT_WHEEL_ENCODER_GPIO_A, RIGHT_WHEEL_ENCODER_GPIO_B, CONTROLLER_WHEELRADIUS);
 
 	_dotLogPosition = new DotLog("position");
-	_dotLogSonar    = new DotLog("sonar");
 
 	reset();
 	_odo->run();
@@ -51,15 +50,17 @@ Controller::~Controller()
 void Controller::reset()
 {
 	_fHeadingRef = 0.0;
-    _fHeadingCurrent = 0.0;
     _fHeadingError = 0.0;
     _fHeadingErrorPrev = 0.0;
     _fHeadingErrorIntegral = 0.0;
 
     _fPosXRef = 0.0;
-    _fPosXCurrent = 0.0;
     _fPosYRef = 0.0;
-    _fPosYCurrent = 0.0;
+
+    _currentPose.x = 0.0;
+    _currentPose.y = 0.0;
+    _currentPose.heading = 0.0;
+    _currentPose.timestamp = 0;
 
     resetDistance();
 }
@@ -108,13 +109,13 @@ void Controller::goToPosition(double x, double y, double fPosXStated, double fPo
 	// Reset the distance counters that are used in the PID loop, they are relative to our last (this) waypoint
 	resetDistance();
 
-	_logger->notice("goToPosition: --- START ---\nGoing to position (%.2f, %.2f) from current position (%.2f, %.2f) and heading [%.2f] ...", x, y, _fPosXCurrent, _fPosYCurrent, _fHeadingCurrent);
+	_logger->notice("goToPosition: --- START ---\nGoing to position (%.2f, %.2f) from current position (%.2f, %.2f) and heading [%.2f] ...", x, y, _currentPose.x, _currentPose.y, _currentPose.heading);
 
 	_fPosXRef = x;
 	_fPosYRef = y;
 
 	// We need to keep our heading as close to this reference heading as possible to reach the waypoint
-	_fHeadingRef = getHeading(_fPosXRef, _fPosYRef, _fPosXCurrent, _fPosYCurrent, _fHeadingCurrent);
+	_fHeadingRef = getHeading(_fPosXRef, _fPosYRef, _currentPose.x, _currentPose.y, _currentPose.heading);
 //	_fHeadingRef = getHeading(_fPosXRef, _fPosYRef, fPosXStated, fPosYStated, _fHeadingCurrent);
 
 	_logger->notice("goToPosition: new heading required is [%.2f]", _fHeadingRef);
@@ -139,7 +140,7 @@ void Controller::goToPosition(double x, double y, double fPosXStated, double fPo
 		if (iteration % 10 == 0)
 		{
 			_logger->notice("goToPosition: recalculating heading based on current position...");
-			_fHeadingRef = getHeading(_fPosXRef, _fPosYRef, _fPosXCurrent, _fPosYCurrent, _fHeadingCurrent);
+			_fHeadingRef = getHeading(_fPosXRef, _fPosYRef, _currentPose.x, _currentPose.y, _currentPose.heading);
 			_logger->notice("new heading is %.2f", _fHeadingRef);
 		}
 
@@ -164,6 +165,8 @@ void Controller::goToPosition(double x, double y, double fPosXStated, double fPo
 	    totaldelayms += delayms;	// total time in this waypoint segment
 	    _totalTime   += delayms;	// total time transiting altogether
 	    tvLast        = tvNow;
+
+	    _currentPose.timestamp = _totalTime;
 
 	    // How long have we slept? This is required for our integral and derivative PID values.
     	double dt = delayms / 1000.0;
@@ -194,54 +197,35 @@ void Controller::goToPosition(double x, double y, double fPosXStated, double fPo
         double fDistRightDelta = _fDistRight - _fDistRightPrev;
 
     	// Position has changed based on the distance travelled at the previous heading
-        _fPosXCurrent    += fDistDelta * cos(_fHeadingCurrent);
-    	_fPosYCurrent    += fDistDelta * sin(_fHeadingCurrent);
+        _currentPose.x += fDistDelta * cos(_currentPose.heading);
+    	_currentPose.y += fDistDelta * sin(_currentPose.heading);
 
     	// Update the heading as it has changed based on the distance travelled too
-    	_fHeadingCurrent += ((fDistRightDelta - fDistLeftDelta) / CONTROLLER_WHEELBASE);
+    	_currentPose.heading += ((fDistRightDelta - fDistLeftDelta) / CONTROLLER_WHEELBASE);
 
         // Ensure our heading remains sane
-    	_fHeadingCurrent = atan2(sin(_fHeadingCurrent), cos(_fHeadingCurrent));
+    	_currentPose.heading = atan2(sin(_currentPose.heading), cos(_currentPose.heading));
 
     	_fDistTotalPrev  = _fDistTotal;
     	_fDistLeftPrev   = _fDistLeft;
     	_fDistRightPrev  = _fDistRight;
 
-    	/**
-    	 * Begin SONAR - disabled as it blocks PID loop too long, work into a separate thread
-    	 */
-		if ((iteration % 5 == 0) && false /* disabled to not block PID loop timing, needs to run in another thread */)
-		{
-	        // Take a reading of the uS to get a distance to anything on our current heading
-	        double fDistObstacle = static_cast<double>(adc_sample(4, 32)) * 0.8;    // 80% correction factor
-
-	        // Work out what the global position of that obstacle would be.
-	        double fPosXObstacle = _fPosXCurrent + (fDistObstacle * cos(_fHeadingCurrent));
-	        double fPosYObstacle = _fPosYCurrent + (fDistObstacle * sin(_fHeadingCurrent));
-
-//	        fprintf(stderr, "%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\n", fPosXCurrent, fPosYCurrent, fPosXObstacle, fPosYObstacle, fHeadingCurrent, fDistObstacle);
-			_dotLogSonar->log((_totalTime / 1000.0), fPosXObstacle, fPosYObstacle);
-        }
-		/**
-		 * End SONAR
-		 */
-
         // What's the error between our required heading and our heading?
-		double fHeadingErrorRaw = _fHeadingRef - _fHeadingCurrent;
+		double fHeadingErrorRaw = _fHeadingRef - _currentPose.heading;
 		_fHeadingError = atan2(sin(fHeadingErrorRaw), cos(fHeadingErrorRaw));
 
 		// How fast should we proceed forward? (Anything below 5 results in non-movement due to inertia)
 		double fForwardVelocity = 9.0;              // 5.0 works as well but undershoots
 
        	// What is the magnitude of the vector between us and our target?
-       	fTargetVectorMagnitude = sqrt(((_fPosXRef - _fPosXCurrent)*(_fPosXRef - _fPosXCurrent)) + ((_fPosYRef - _fPosYCurrent)*(_fPosYRef - _fPosYCurrent)));
+       	fTargetVectorMagnitude = sqrt(((_fPosXRef - _currentPose.x)*(_fPosXRef - _currentPose.x)) + ((_fPosYRef - _currentPose.y)*(_fPosYRef - _currentPose.y)));
 
        	if (bFirstIteration)
        	{
        	    fTargetVectorMagnitudeInitial = fTargetVectorMagnitude;
        	}
 
-    	_logger->notice("goToPosition: heading[%.4f, e: %.6f] posX[%.2f] posY[%.2f] distToTarget[%.2f] distToTargetLast[%.2f]", _fHeadingCurrent, _fHeadingError, _fPosXCurrent, _fPosYCurrent, fTargetVectorMagnitude, fTargetVectorMagnitudeLast);
+    	_logger->notice("goToPosition: heading[%.4f, e: %.6f] posX[%.2f] posY[%.2f] distToTarget[%.2f] distToTargetLast[%.2f]", _currentPose.heading, _fHeadingError, _currentPose.x, _currentPose.y, fTargetVectorMagnitude, fTargetVectorMagnitudeLast);
 
     	/**
     	 * @todo: Come up with a better way of determining whether we should consider ourself "close enough" to the waypoint.
@@ -286,12 +270,12 @@ void Controller::goToPosition(double x, double y, double fPosXStated, double fPo
     	if (fTargetVectorMagnitude <= 5)
     	{
     	    _logger->notice("goToPosition: You have arrived at your destination!\ngoToPosition: --- END ---\n");
-            _dotLogPosition->log((_totalTime / 1000.0), _fPosXCurrent, _fPosYCurrent, DotLog::DotLogPositionColour::RED, true);
+            _dotLogPosition->log((_totalTime / 1000.0), _currentPose.x, _currentPose.y, DotLog::DotLogPositionColour::RED, true);
     	    break;
     	}
     	else
     	{
-            _dotLogPosition->log((_totalTime / 1000.0), _fPosXCurrent, _fPosYCurrent, bApproachingTarget ? DotLog::DotLogPositionColour::RED : DotLog::DotLogPositionColour::BLACK);
+            _dotLogPosition->log((_totalTime / 1000.0), _currentPose.x, _currentPose.y, bApproachingTarget ? DotLog::DotLogPositionColour::RED : DotLog::DotLogPositionColour::BLACK);
     	}
 
 		fTargetVectorMagnitudeLast = fTargetVectorMagnitude;
@@ -477,4 +461,16 @@ double Controller::getHeading(double toX, double toY, double fromX, double fromY
 	}
 
 	return fRad;
+}
+
+/**
+ * Get the current pose of the robot.
+ *
+ * @todo: critical section around these
+ *
+ * @return Pose
+ */
+Pose Controller::getCurrentPose()
+{
+	return _currentPose;
 }

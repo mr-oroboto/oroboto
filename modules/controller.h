@@ -11,6 +11,8 @@
 #ifndef _CONTROLLER_H_INCLUDED
 #define _CONTROLLER_H_INCLUDED
 
+#include "../libs/poseprovider.h"
+
 #define CONTROLLER_PID_PROPORTIONAL 0.90        // contributes to stability and medium-rate responsiveness
 #define CONTROLLER_PID_INTEGRAL 0.0005          // tracking and disturbance rejection (slow-rate responsiveness, may cause oscillations)
 #define CONTROLLER_PID_DERIVATIVE 0.00          // fast-rate responsiveness, can cause overshoot: note 0.1 is safer
@@ -31,11 +33,14 @@ class Odometer;
 class Logger;
 class DotLog;
 
-class Controller
+struct Pose;
+
+class Controller : public PoseProvider
 {
 	private:
+		Pose	_currentPose;					// (believed) current x, y and heading
+
 		double  _fHeadingRef;					// reference heading required to go from (believed) current pose to desired waypoint
-		double  _fHeadingCurrent;				// (believed) current heading
 		double  _fHeadingError;					// for PID proportional
 		double  _fHeadingErrorPrev;				// for PID derivative
 		double  _fHeadingErrorIntegral;			// for PID integral
@@ -48,9 +53,7 @@ class Controller
 		double  _fDistTotalPrev;				// previous total distance travelled in this waypoint segment
 
 		double  _fPosXRef;						// x position of next desired waypoint
-		double  _fPosXCurrent;					// current x position
 		double  _fPosYRef;						// y position of next desired waypoint
-		double	_fPosYCurrent;					// current y position
 
 		unsigned long _totalTime;				// total time elapsed while transiting between waypoints (runtime)
 
@@ -59,11 +62,10 @@ class Controller
 		void     reset();
 		void     resetDistance();
 
-		Odometer *	_odo;
-		Logger   *	_logger;
+		Odometer * _odo;
+		Logger   * _logger;
 
-		DotLog   * 	_dotLogPosition;
-		DotLog   *  _dotLogSonar;
+		DotLog   * _dotLogPosition;
 
 		int      convertVelocityToPWMPercentage(bool leftMotor, double fVelocity);
 
@@ -71,9 +73,10 @@ class Controller
 		Controller();
 		~Controller();
 
-		void        goToPosition(double x, double y, double fPosXStated, double fPosYStated);
-		double      getHeading(double toX, double toY, double fromX, double fromY, double fCurrentHeading);
+		void        	goToPosition(double x, double y, double fPosXStated, double fPosYStated);
+		double      	getHeading(double toX, double toY, double fromX, double fromY, double fCurrentHeading);
 
+		Pose			getCurrentPose();
 };
 
 #endif // _CONTROLLER_H_INCLUDED
