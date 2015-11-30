@@ -9,16 +9,24 @@
 #ifndef _DOTLOG_H_INCLUDED
 #define _DOTLOG_H_INCLUDED
 
-class Logger;
+#define DOTLOG_SERVER "192.168.7.1"
+#define DOTLOG_PORT   "50607"
+
+class  Logger;
+struct addrinfo;
 
 class DotLog
 {
 	private:
-		FILE * 		_fLog;
-		Logger *	_logger;
+		FILE * 				_fLog;
+		Logger *			_logger;
+		int        			_socket;
+		struct addrinfo *	_dotLogServerList;
+		struct addrinfo *	_dotLogServerAddr;
+
 
 	public:
-		DotLog(const char *logName);
+		DotLog(const char *logName, bool enableRemoteLogging = false);
 		~DotLog();
 
 		struct DotLogPositionColour
